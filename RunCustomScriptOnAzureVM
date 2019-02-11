@@ -1,0 +1,42 @@
+$InitialExecutionDatetime = (Get-Date)
+Write-Output "Script start time $($InitialExecutionDatetime)"
+$CurrentDateTime=$InitialExecutionDatetime.ToUniversalTime()
+$connectionName = "AzureRunAsConnection"
+$Conn = Get-AutomationConnection -Name $connectionName 
+#We are login using a Service Principal Account
+[int]$NoOfDays=1
+Write-output "Login to Azure"
+$RetunrObjItm = new-object PSObject
+[int]$counter=0
+$AzureLoginResults = Login-AzureRmAccount `
+-ServicePrincipal `
+-TenantId $Conn.TenantId `
+-ApplicationId $Conn.ApplicationId `
+-CertificateThumbprint $Conn.CertificateThumbprint -ErrorAction SilentlyContinue -ErrorVariable LoginError `
+
+# We set the Subscription we are going to use
+Set-AzureRmContext -SubscriptionId "<SubscriptionID>"
+
+# Credential Defined in the Automation Account, this account will be used to execute the script
+$Cred = Get-AutomationPSCredential -Name 'TestVM Cred'
+
+#Specify the VM onto which you want to act upon
+$VMResourceGroup = "GMtestingVaultRG"
+$ResourceGroupLocation = "Central US"
+$VMName = "GMTest01"
+
+#Provide the script file URL
+$ScriptURI = "<URL of the blob file>"
+
+#Run Script on VM
+Write-output "Running script on the VM"
+Set-AzureRmVMCustomScriptExtension -ResourceGroupName $VMResourceGroup `
+-VMName $VMName `
+-Location $ResourceGroupLocation `
+-FileUri $ScriptURI `
+-Run "DiskCleanup.ps1" `
+-Name "CustomScriptExtension" `
+-ForceRerun $(New-Guid).Guid `
+
+#Script Results
+Write-output "Completed running script on the VM"   
